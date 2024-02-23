@@ -1,0 +1,387 @@
+web->img->server->convert->pdf->base64 to server. 
+Date: 14.07.2023
+
+HTML
+---------------------------
+<!doctype html>
+<html lang ="en">
+    <head>
+        <meta name="viewport" content = "width=device-width,initial-scale = 1.0"/>
+        <title>Image To Pdf</title>
+        <script src ="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet"  href = "static/style.css"/>
+    </head>
+    <!-- Body -->
+    <body>
+        
+        <div class="wrapper">
+            <div class="box">
+                <div>
+                    <button type = 'submit' id = 'Submit_files' onclick="print_console()"> Submit</button>
+                    <a  id="download" download="" >Dowload pdf</a>
+                </div>
+                <div class="input-bx">
+                    <h2 class="upload-area-title">Upload File</h2>
+                    <form action="">
+                        <input type="file" id="upload" accept=".jpeg, .png , .jpg" hidden>
+                        <label for="upload" class="uploadlabel">
+                            <span><i class="fa fa-cloud-upload"></i></span>
+                            <p>Click to Upload</p>
+                        </label>
+                    </form>
+                </div>
+                <div id="filewrapper">
+                    <h3 class="uploaded"> Uploaded Documents</h3>
+                   <!-- <div class="showfilebox">
+                        <div class="left">
+                            <span class="filetype">Pdf</span>
+                            <h3>Hitesh.pdf</h3>
+                        </div>
+                        <div class="right">
+                            <span>&#215;</span>
+                        </div>
+                    </div>-->
+                </div>
+                
+            </div>
+        </div>
+       <!-- <p>Enter the file :</p>
+        <input type = "file" id = 'photo'>
+        <button type ="submit" onclick = "genUrl()">Submit</button>
+        <a  id="download" download="" >Dowload pdf</a>
+       -->
+        <script src = "{{url_for('static', filename = 'script.js' )}}" ></script>
+    </body>
+</html>
+------------------------------
+Script
+--------------------------------
+//
+//
+var store = [];
+var count =0;
+window.addEventListener("load" , ()=>{
+	const input = document.getElementById("upload");
+	const filewrapper =  document.getElementById("filewrapper");
+	
+	input.addEventListener("change" , (e)=>{
+		let filename = e.target.files[0].name;
+		let filetype = e.target.value.split('.').pop();
+		fileshow(filename, filetype);
+		//save input files in array
+	
+		var file = input.files[0];
+		var read = new FileReader();
+		read.readAsDataURL(file);
+		read.addEventListener('load', ()=>{
+			var temporary = read.result;
+			store[count] = temporary;
+			count++;
+		})
+		
+		//end of saving file
+	})
+
+	const  fileshow = (filename,filetype)=> {
+		const showfileboxElement = document.createElement("div");
+		showfileboxElement.classList.add("showfilebox");
+		const leftElement  = document.createElement("div");
+		leftElement.classList.add("left");
+		const fileTypeElement = document.createElement("span");
+		fileTypeElement.classList.add("filetype");
+		fileTypeElement.innerHTML = filetype;
+		const fileTitleElement = document.createElement("h3");
+		fileTitleElement.innerHTML = filename;
+		leftElement.append(fileTitleElement);
+		showfileboxElement.append(leftElement);
+		const rightElement = document.createElement("div");
+		rightElement.classList.add("right");
+		showfileboxElement.append(rightElement);
+		const crossElement = document.createElement("span");
+		crossElement.innerHTML = "&#215;";
+		rightElement.append(crossElement);
+		filewrapper.append(showfileboxElement);
+
+		crossElement.addEventListener("click", ()=>{
+			filewrapper.removeChild(showfileboxElement);
+			count--;
+		})
+
+		
+	}
+
+})
+
+function print_console(){
+	myfunction();
+}
+
+var Input =  document.getElementById('photo');
+var temp;
+// fetching the image from browser and converting the image to base64 
+function genUrl()
+{
+   var file = Input.files[0];
+   var reader = new FileReader();
+   reader.readAsDataURL(file);
+   reader.addEventListener('load', ()=> {
+	   temp =reader.result;
+	   myfunction();
+   });
+}
+//Converting the base64 to pdf file and uploading the file to the browser
+function upload_file(base64_pdf_val)
+{
+	const binaryString = atob(base64_pdf_val.split(",")[1]);
+	const uint8Array = new Uint8Array(binaryString.length);
+	for (let i = 0; i < binaryString.length; i++) {
+	  uint8Array[i] = binaryString.charCodeAt(i);
+	}
+	const blob = new Blob([uint8Array], { type: "application/pdf" });
+	const url = URL.createObjectURL(blob);
+  //console.log(url);
+  const a = document.getElementById("download");
+	a.href = url;
+	a.download = 'hitesh.pdf';
+}
+//sending a post request to the backend flask application for convertion of img to pdf
+function myfunction(){
+   var value = store;
+   
+   $.ajax({
+	   url: '/process',
+	   type: 'POST',
+	   contentType: 'application/json',
+	   data: JSON.stringify({'value':  value}),
+	   success: function(response){
+
+		  // document.getElementById('output').innerHTML = response;
+		   upload_file(response);
+	   },
+	   error: function(error){
+		   console.log(error);
+	   }
+   });
+   }
+--------------------------------
+python
+--------------------------------
+from flask import Flask,jsonify,request,render_template
+from flask_cors import CORS
+from PIL import Image
+import base64
+from io import BytesIO
+import os
+
+
+app =  Flask(__name__,template_folder = "templates")
+
+
+CORS(app)
+@app.route('/')
+def render():
+    return render_template("CSV_Converter_WebPage.html")
+
+
+@app.route('/process', methods = ['POST'])
+def process():
+
+    path  = 'E:\\Hitesh Docs\\Web Devlopment\\CSV_Converter'
+    os.chdir(path)
+    imageFolder  = 'image_file'
+    os.makedirs(imageFolder)
+    pdfFolder = 'pdf_file'
+    os.makedirs(pdfFolder)
+
+
+    dir_path = '.\image_file'
+
+
+    #Base64 Data is restored from json form
+    data = request.get_json()
+    store = data['value']
+    count = 1
+    for val in store:
+        val = val[val.index(',')+1:]
+        #Base64 is converted to image and saved in image_file as image.jpg
+        bytes_decoded = base64.b64decode((val))
+        img=Image.open(BytesIO(bytes_decoded))
+        out_jpg = img.convert('RGB')
+        counter = "%s" %count
+        prefix = 'photo'+counter+'.jpg'
+        name = os.path.join(dir_path,prefix)
+        out_jpg.save(name)
+        count+=1
+
+
+
+    #image is converted to pdf and saved in pdf_file as Hitesh.pdf
+    image_list = []
+    for img in os.listdir(dir_path):
+        image_list.append(Image.open(os.path.join(dir_path,img)))
+
+    pdf_name = './pdf_file/Hitesh.pdf'
+    image_list[0].save(pdf_name,"PDF",resolution =100.0 , save_all= True, append_images = image_list[1:])
+
+
+
+    #pdf is converted to base64 format
+    with open('./pdf_file/Hitesh.pdf','rb') as imageFile:
+        val = base64.b64encode(imageFile.read())
+    
+
+
+    # base64 of pdf is then converted to string so as to send as a reply to the frontend post request
+    data['processedpdf'] = val.decode()
+    str = 'data:application/pdf;base64,'+data['processedpdf']
+
+
+
+    #deleting the temporary folder which is created for storing and converting the images to pdf
+    #deleting image folder
+    dir_img = os.path.join(path,imageFolder)
+    for f in os.listdir(dir_img):
+        os.remove(os.path.join(dir_img,f))
+    os.rmdir(os.path.join(path,imageFolder))
+
+
+
+    #deleting pdf folder
+    dir_pdf = os.path.join(path,pdfFolder)
+    for f in os.listdir(dir_pdf):
+        os.remove(os.path.join(dir_pdf,f))
+    os.rmdir(os.path.join(path,pdfFolder))
+
+
+
+    # reply sent in JSON format
+    return jsonify(str)
+
+if __name__ == '__main__':
+    app.run(debug = True, port = 5500)
+--------------------------------------------------------
+Style.css
+
+------------------------------------------------------------
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 15px;
+    width: 100%;
+    min-height: 100vh;
+    background: #5691d5;
+    background: linear-gradient(282deg, #009dff 0%, #54bdff);
+}
+
+.box {
+    max-width: 500px;
+    background: #fff;
+    padding: 30px;
+    width: 100%;
+    border-radius: 5px;
+    -webkit-border-radius: 5px;
+    -moz-border-radius:5px;
+    -ms-border-radius:5px;
+    -o-border-radius: 5px;
+}
+
+.upload-area-title{
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.uploadlabel{
+    width: 100%;
+    min-height: 100px;
+    background: #18a7ff0d;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border: 3px dashed #18a7ff82;
+    cursor: pointer;
+}
+
+.uploadlabel span{
+    font-size: 70px;
+    color: #18a7ff;
+}
+
+.uploadlabel p{
+    color: #18a7ff;
+    font-size: 20px;
+    font-weight: 800;
+    font-family: cursive;
+}
+
+.uploaded{
+    margin: 30px 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #a5a5a5;
+}
+
+.showfilebox{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 10px 0;
+    padding: 10px 15px;
+    box-shadow: #0000000d 0px 0px 0px 1px, #d1d5db3d 0px 0px 0px 1px inset; 
+}
+
+.showfilebox .left{
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.filetype{
+    background: #18a7ff;
+    color: #fff;
+    padding: 5px 15px;
+    font-size: 20px;
+    text-transform: capitalize;
+    font-weight: 700;
+    border-radius: 3px;
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    -ms-border-radius: 3px;
+    -o-border-radius: 3px;
+}
+.left h3{
+    font-weight: 600;
+    font-size: 18px;
+    color: #292f42;
+    margin: 0;
+}
+.right span{
+    background: #18a7ff;
+    color: #fff;
+    width: 25px;
+    height: 25px;
+    font-size: 25px;
+    line-height: 25px;
+    display: inline-block;
+    text-align: center;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 50%;
+    -webkit-border-radius: 50%;
+    -moz-border-radius: 50%;
+    -ms-border-radius: 50%;
+    -o-border-radius: 50%;
+}
+-------------------------------------------------------------

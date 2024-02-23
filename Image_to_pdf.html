@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang ="en">
+    <head>
+        <meta name="viewport" content = "width=device-width,initial-scale = 1.0"/>
+        <title>Image To Pdf</title>
+        <script src ="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet"  href = "static/style.css"/>
+    </head>
+    <!-- Body -->
+    <body>
+        
+        <div class="wrapper">
+            <div class="box">
+                <div class  = "btn-group">
+                        <button type = 'submit' id = 'Submit_files' onclick="print_console()"> Submit</button>
+                        <button type = 'submit'> <a  id="download" download="" >Dowload</a></button>
+                </div>
+                <div class="input-bx">
+                    <h2 class="upload-area-title">Upload File</h2>
+                    <form action="">
+                        <input type="file" id="upload" accept=".jpeg, .png , .jpg" hidden>
+                        <label for="upload" class="uploadlabel">
+                            <span><i class="fa fa-cloud-upload"></i></span>
+                            <p>Click to Upload</p>
+                        </label>
+                    </form>
+                </div>
+                <div id="filewrapper">
+                    <h3 class="uploaded"> Uploaded Documents</h3>
+                   <!-- <div class="showfilebox">
+                        <div class="left">
+                            <span class="filetype">Pdf</span>
+                            <h3>Hitesh.pdf</h3>
+                        </div>
+                        <div class="right">
+                            <span>&#215;</span>
+                        </div>
+                    </div>-->
+                </div>
+                
+            </div>
+        </div>
+       <!-- <p>Enter the file :</p>
+        <input type = "file" id = 'photo'>
+        <button type ="submit" onclick = "genUrl()">Submit</button>
+        <a  id="download" download="" >Dowload pdf</a>
+       -->
+        <script src = "{{url_for('static', filename = 'script.js' )}}" ></script>
+    </body>
+</html>
